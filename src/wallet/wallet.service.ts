@@ -1,4 +1,3 @@
-
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Wallet } from './models/wallet.model';
@@ -11,14 +10,16 @@ export class WalletService {
     @InjectModel(Transaction) private transactionModel: typeof Transaction,
   ) {}
 
+  
   async createWallet(userId: number): Promise<Wallet> {
     return this.walletModel.create({ userId });
   }
 
+  
   async getWallet(userId: number): Promise<Wallet> {
     const wallet = await this.walletModel.findOne({
       where: { userId },
-      include: [{ model: Transaction, as: 'transactions' }],
+      include: [Transaction],
     });
 
     if (!wallet) {
@@ -28,25 +29,22 @@ export class WalletService {
     return wallet;
   }
 
-  async listWallets(): Promise<Wallet[]> {
-    return this.walletModel.findAll({ include: [{ model: Transaction, as: 'transactions' }] });
+  
+  async getActiveWallets(): Promise<Wallet[]> {
+    return this.walletModel.findAll({
+      where: { isActive: true },
+      include: [Transaction],
+    });
   }
 
-  async updateWallet(userId: number, balance: number): Promise<Wallet> {
+  
+  async creditWallet(userId: number, amount: number, description: string): Promise<Wallet> {
     const wallet = await this.getWallet(userId);
-    wallet.balance = balance;
-    await wallet.save();
-    return wallet;
-  }
 
-  async deleteWallet(userId: number): Promise<string> {
-    const wallet = await this.getWallet(userId);
-    await wallet.destroy();
-    return `Wallet for user ${userId} deleted successfully`;
-  }
+    if (!wallet.isActive) {
+      throw new BadRequestException('Wallet is inactive');
+    }
 
-  async creditWallet(userId: number, amount: number): Promise<Wallet> {
-    const wallet = await this.getWallet(userId);
     wallet.balance += amount;
     await wallet.save();
 
@@ -54,13 +52,19 @@ export class WalletService {
       walletId: wallet.id,
       amount,
       type: 'CREDIT',
+      description,
     });
 
     return wallet;
   }
 
-  async debitWallet(userId: number, amount: number): Promise<Wallet> {
+  
+  async debitWallet(userId: number, amount: number, description: string): Promise<Wallet> {
     const wallet = await this.getWallet(userId);
+
+    if (!wallet.isActive) {
+      throw new BadRequestException('Wallet is inactive');
+    }
 
     if (wallet.balance < amount) {
       throw new BadRequestException('Insufficient balance');
@@ -73,18 +77,62 @@ export class WalletService {
       walletId: wallet.id,
       amount,
       type: 'DEBIT',
+      description,
     });
 
     return wallet;
   }
 
-  async getWalletBalance(userId: number): Promise<number> {
+  
+  async payForOrder(userId: number, amount: number, orderId: string): Promise<Wallet> {
     const wallet = await this.getWallet(userId);
-    return wallet.balance;
+
+    if (!wallet.isActive) {
+      throw new BadRequestException('Wallet is inactive');
+    }
+
+    if (wallet.balance < amount) {
+      throw new BadRequestException('Insufficient balance to pay for the order');
+    }
+
+    wallet.balance -= amount;
+    await wallet.save();
+
+    await this.transactionModel.create({
+      walletId: wallet.id,
+      amount,
+      type: 'ORDER_PAYMENT',
+      description: `Payment for order #${orderId}`,
+    });
+
+    return wallet;
   }
 
-  async getWalletTransactions(userId: number): Promise<Transaction[]> {
-    const wallet = await this.getWallet(userId);
-    return wallet.transactions;
+  
+  async deactivateWallet(userId: number): Promise<string> {
+    const wallet = await this.walletModel.findOne({ where: { userId } });
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    wallet.isActive = false;
+    await wallet.save();
+
+    return `Wallet for user ${userId} has been deactivated.`;
+  }
+
+  
+  async reactivateWallet(userId: number): Promise<string> {
+    const wallet = await this.walletModel.findOne({ where: { userId } });
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    wallet.isActive = true;
+    await wallet.save();
+
+    return `Wallet for user ${userId} has been reactivated.`;
   }
 }

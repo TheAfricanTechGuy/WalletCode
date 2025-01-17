@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 
 @Controller('wallet')
@@ -15,37 +15,45 @@ export class WalletController {
     return this.walletService.getWallet(userId);
   }
 
-  @Get()
-  async listWallets() {
-    return this.walletService.listWallets();
-  }
-
-  @Put(':userId')
-  async updateWallet(
-    @Param('userId') userId: number,
-    @Body('balance') balance: number,
-  ) {
-    return this.walletService.updateWallet(userId, balance);
-  }
-
-  @Delete(':userId')
-  async deleteWallet(@Param('userId') userId: number) {
-    return this.walletService.deleteWallet(userId);
+  @Get('active')
+  async getActiveWallets() {
+    return this.walletService.getActiveWallets();
   }
 
   @Post(':userId/credit')
   async creditWallet(
     @Param('userId') userId: number,
     @Body('amount') amount: number,
+    @Body('description') description: string,
   ) {
-    return this.walletService.creditWallet(userId, amount);
+    return this.walletService.creditWallet(userId, amount, description);
   }
 
   @Post(':userId/debit')
   async debitWallet(
     @Param('userId') userId: number,
     @Body('amount') amount: number,
+    @Body('description') description: string,
   ) {
-    return this.walletService.debitWallet(userId, amount);
+    return this.walletService.debitWallet(userId, amount, description);
+  }
+
+  @Post(':userId/pay')
+  async payForOrder(
+    @Param('userId') userId: number,
+    @Body('amount') amount: number,
+    @Body('orderId') orderId: string,
+  ) {
+    return this.walletService.payForOrder(userId, amount, orderId);
+  }
+
+  @Post(':userId/deactivate')
+  async deactivateWallet(@Param('userId') userId: number) {
+    return this.walletService.deactivateWallet(userId);
+  }
+
+  @Post(':userId/reactivate')
+  async reactivateWallet(@Param('userId') userId: number) {
+    return this.walletService.reactivateWallet(userId);
   }
 }

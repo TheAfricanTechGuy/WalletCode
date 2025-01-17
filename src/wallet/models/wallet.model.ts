@@ -16,6 +16,12 @@ export class Wallet extends Model<Wallet> {
   })
   balance: number;
 
+  @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: true, // Wallet is active by default
+  })
+  isActive: boolean;
+
   @HasMany(() => Transaction)
   transactions: Transaction[];
 }

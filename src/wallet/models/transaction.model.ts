@@ -14,10 +14,16 @@ export class Transaction extends Model<Transaction> {
   amount: number;
 
   @Column({
-    type: DataType.ENUM('CREDIT', 'DEBIT'),
+    type: DataType.ENUM('CREDIT', 'DEBIT', 'ORDER_PAYMENT'),
     allowNull: false,
   })
-  type: 'CREDIT' | 'DEBIT';
+  type: 'CREDIT' | 'DEBIT' | 'ORDER_PAYMENT';
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  description: string;
 
   @Column({
     type: DataType.DATE,

@@ -10,7 +10,7 @@ import { WalletModule } from './wallet/wallet.module';
       port: 5432,
       username: 'postgres',
       password: 'password',
-      database: 'wallet_system',
+      database: 'ecommerce_wallet',
       autoLoadModels: true,
       synchronize: true,
     }),
